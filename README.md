@@ -8,7 +8,7 @@ Dự án này triển khai thuật toán **Tìm kiếm trong không gian trạng
 
 Dưới đây là video mô phỏng toàn bộ tiến trình 11 bước giải bài toán được thực hiện tự động bởi thuật toán BFS:
 
-![Demo mô phỏng động](/C:/Users/Admin/.gemini/antigravity/brain/86c94598-c20f-4bb0-8fc8-ab711567f713/dynamic_sim_demo_1776183377804.webp)
+![Demo mô phỏng động](./docs/assets/demo.webp)
 
 ---
 
