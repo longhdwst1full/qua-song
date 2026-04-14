@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Millionaires & Robbers Solver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .river {
+            background: linear-gradient(180deg, #1e40af 0%, #3b82f6 50%, #1e40af 100%);
+        }
+        .boat {
+            transition: all 0.8s ease-in-out;
+        }
+        .person {
+            transition: all 0.4s ease-in-out;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="p-6 text-center border-b border-slate-700">
+        <h1 class="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+            Triệu Phú & Cướp Qua Sông
+        </h1>
+        <p class="text-slate-400 mt-2">Mô phỏng Tìm kiếm không gian trạng thái (BFS)</p>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row p-6 gap-6 overflow-hidden">
+        
+        <!-- Simulation Area -->
+        <div class="flex-grow bg-slate-800 rounded-3xl p-8 flex flex-col items-center justify-center relative shadow-2xl border border-slate-700">
+            
+            <div class="w-full flex justify-between items-center h-80 relative">
+                <!-- Left Bank -->
+                <div id="leftBank" class="w-1/4 h-full bg-orange-900/20 rounded-2xl p-4 flex flex-wrap content-start gap-3 border-r-4 border-orange-800/50 border-dashed">
+                    <div class="w-full text-center font-bold text-orange-400 mb-4 uppercase tracking-widest text-xs">Bờ Trái</div>
+                </div>
+
+                <!-- River Area -->
+                <div class="flex-grow h-full river relative overflow-hidden rounded-lg mx-2">
+                    <div id="boat" class="absolute left-0 top-1/2 -translate-y-1/2 w-40 h-20 bg-amber-900 rounded-b-3xl shadow-2xl flex flex-col items-center justify-center boat border-t-4 border-amber-700">
+                         <div class="text-[10px] font-bold text-amber-200">THUYỀN</div>
+                         <div id="boatPassengers" class="flex gap-1 mt-1"></div>
+                    </div>
+                </div>
+
+                <!-- Right Bank -->
+                <div id="rightBank" class="w-1/4 h-full bg-emerald-900/20 rounded-2xl p-4 flex flex-wrap content-start gap-3 border-l-4 border-emerald-800/50 border-dashed">
+                    <div class="w-full text-center font-bold text-emerald-400 mb-4 uppercase tracking-widest text-xs">Bờ Phải</div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="mt-12 flex items-center gap-6 bg-slate-900/50 p-4 rounded-full border border-slate-700 shadow-inner">
+                <button id="prevBtn" class="w-12 h-12 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-full transition-all active:scale-95 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:-translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                
+                <div class="text-center min-w-[120px]">
+                    <div id="stepCounter" class="text-2xl font-black font-mono text-blue-400">0 / 11</div>
+                    <div class="text-[10px] uppercase tracking-tighter text-slate-500">Tiến trình</div>
+                </div>
+
+                <button id="nextBtn" class="w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-500 rounded-full transition-all active:scale-95 group shadow-lg shadow-blue-900/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button id="resetBtn" class="px-4 py-1.5 bg-slate-700 hover:bg-red-900/40 hover:text-red-400 rounded-lg text-sm font-medium transition-colors border border-slate-600">Đặt lại</button>
+                <div id="statusText" class="px-4 py-1.5 bg-slate-900/80 rounded-lg text-sm text-blue-300 border border-blue-900/30 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                    Sẵn sàng...
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar List -->
+        <div class="lg:w-96 bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-700 flex flex-col h-[600px] lg:h-auto">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-3">
+                <span class="w-2 h-8 bg-gradient-to-b from-blue-500 to-emerald-500 rounded-full"></span>
+                Các bước thực hiện
+            </h2>
+            <div id="stepsList" class="flex-grow overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                <!-- Steps injected here -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-4 text-center text-slate-600 text-xs">
+        Triệu Phú & Cướp Solver © 2024 - Sử dụng thuật toán Breadth-First Search
+    </footer>
+
+    <script>
+        /** 
+         * --- LOGIC GIẢI THUẬT (Dạng Functional) ---
+         * Chúng ta sử dụng Breadth-First Search (BFS) để tìm đường đi ngắn nhất.
+         * Không gian trạng thái được khám phá theo từng 'tầng' để đảm bảo tính tối ưu.
+         */
+
+        /**
+         * Kiểm tra tính an toàn của một trạng thái.
+         * Quy tắc: Nếu số lượng Triệu phú (T) > 0, thì số T phải >= số Cướp (C).
+         * @param {number} tl - Số T bờ trái
+         * @param {number} cl - Số C bờ trái
+         */
+        function isValid(tl, cl) {
+            const tr = 3 - tl; // T bờ phải
+            const cr = 3 - cl; // C bờ phải
+            
+            // 1. Kiểm tra số lượng có nằm trong khoảng [0, 3] không
+            if (tl < 0 || cl < 0 || tl > 3 || cl > 3) return false;
+            
+            // 2. Kiểm tra an toàn bờ trái: Nếu có T, T phải >= C
+            if (tl > 0 && cl > tl) return false;
+            
+            // 3. Kiểm tra an toàn bờ phải: Nếu có T, T phải >= C
+            if (tr > 0 && cr > tr) return false;
+            
+            return true;
+        }
+
+        /**
+         * Sinh ra các trạng thái kế tiếp có thể có từ trạng thái hiện tại.
+         * Mỗi bước đi thuyền chở từ 1 đến 2 người.
+         */
+        function getNeighbors(state) {
+            const { tl, cl, boat } = state;
+            
+            // Các hành động có thể: [số T đi, số C đi]
+            const actions = [
+                [1, 0], [2, 0], [0, 1], [0, 2], [1, 1]
+            ];
+            
+            const neighbors = [];
+            for (const [dt, dc] of actions) {
+                let ntl, ncl, nboat;
+                
+                // Nếu thuyền ở bên Trái, đưa người sang bên Phải
+                if (boat === 'LEFT') {
+                    ntl = tl - dt; ncl = cl - dc; nboat = 'RIGHT';
+                } 
+                // Nếu thuyền ở bên Phải, đưa người về bên Trái
+                else {
+                    ntl = tl + dt; ncl = cl + dc; nboat = 'LEFT';
+                }
+                
+                const desc = `Di chuyển ${dt > 0 ? dt + 'T' : ''} ${dc > 0 ? dc + 'C' : ''}`.trim();
+                const nextState = { 
+                    tl: ntl, cl: ncl, boat: nboat, 
+                    action: desc, 
+                    moved: {t: dt, c: dc} 
+                };
+                
+                // Chỉ thêm nếu trạng thái mới không vi phạm quy tắc an toàn
+                if (isValid(ntl, ncl)) {
+                    neighbors.push(nextState);
+                }
+            }
+            return neighbors;
+        }
+
+        /**
+         * Hàm thực hiện tìm kiếm BFS.
+         * Trả về mảng các bước đi từ Start đến Goal.
+         */
+        function solveBFS() {
+            // Trạng thái xuất phát: 3T, 3C, Bờ Trái
+            const start = { tl: 3, cl: 3, boat: 'LEFT', path: [] };
+            
+            const queue = [{ ...start, path: [start] }];
+            const visited = new Set();
+            visited.add(`3-3-LEFT`);
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                
+                // Kiểm tra điều kiện dừng: Tất cả đã sang bờ Phải (0T, 0C ở bờ Trái)
+                if (current.tl === 0 && current.cl === 0 && current.boat === 'RIGHT') {
+                    return current.path;
+                }
+                
+                // Khám phá các trạng thái lân cận
+                const neighbors = getNeighbors(current);
+                for (const neighbor of neighbors) {
+                    const key = `${neighbor.tl}-${neighbor.cl}-${neighbor.boat}`;
+                    
+                    if (!visited.has(key)) {
+                        visited.add(key);
+                        // Kỹ thuật: Lưu trữ toàn bộ đường đi vào node để dễ dàng truy xuất khi tìm xong
+                        queue.push({ ...neighbor, path: [...current.path, neighbor] });
+                    }
+                }
+            }
+            return null;
+        }
+
+        // --- LOGIC GIAO DIỆN (UI) ---
+        let path = [];
+        let currentIdx = 0;
+
+        const leftBankEl = document.getElementById('leftBank');
+        const rightBankEl = document.getElementById('rightBank');
+        const boatEl = document.getElementById('boat');
+        const boatPassengersEl = document.getElementById('boatPassengers');
+        const stepsListEl = document.getElementById('stepsList');
+        const stepCounterEl = document.getElementById('stepCounter');
+        const statusTextEl = document.getElementById('statusText');
+
+        /**
+         * Cập nhật giao diện dựa trên bước hiện tại
+         */
+        function renderStep(index) {
+            currentIdx = index;
+            const state = path[index];
+
+            // 1. Xóa các icon người cũ
+            leftBankEl.querySelectorAll('.person').forEach(el => el.remove());
+            rightBankEl.querySelectorAll('.person').forEach(el => el.remove());
+
+            // 2. Vẽ người lên 2 bờ
+            for(let i=0; i<state.tl; i++) createPerson(leftBankEl, 'T');
+            for(let i=0; i<state.cl; i++) createPerson(leftBankEl, 'C');
+            for(let i=0; i<(3-state.tl); i++) createPerson(rightBankEl, 'T');
+            for(let i=0; i<(3-state.cl); i++) createPerson(rightBankEl, 'C');
+
+            // 3. Di chuyển thuyền (sử dụng CSS Transition)
+            boatEl.style.left = (state.boat === 'LEFT') ? '0%' : 'calc(100% - 10rem)';
+
+            // 4. Hiển thị người đi trên thuyền
+            boatPassengersEl.innerHTML = '';
+            if (state.moved) {
+                for(let i=0; i<state.moved.t; i++) createPerson(boatPassengersEl, 'T', true);
+                for(let i=0; i<state.moved.c; i++) createPerson(boatPassengersEl, 'C', true);
+            }
+
+            // 5. Cập nhật chỉ số và mô tả
+            stepCounterEl.innerText = `${index} / ${path.length - 1}`;
+            statusTextEl.innerHTML = `<span class="w-2 h-2 bg-blue-500 rounded-full ${index === path.length-1 ? '' : 'animate-pulse'}"></span> ${state.action || 'Khởi điểm'}`;
+
+            // 6. Active trạng thái trong danh sách bên phải
+            document.querySelectorAll('.step-card').forEach((el, i) => {
+                if(i === index) el.classList.add('bg-blue-600/30', 'border-blue-500', 'scale-[1.02]');
+                else el.classList.remove('bg-blue-600/30', 'border-blue-500', 'scale-[1.02]');
+            });
+        }
+
+        /**
+         * Tạo DOM element cho nhân vật
+         */
+        function createPerson(parent, type, small = false) {
+            const el = document.createElement('div');
+            const size = small ? 'w-6 h-6 text-[10px]' : 'w-10 h-10 text-sm';
+            el.className = `person ${size} rounded-full flex items-center justify-center font-bold shadow-lg transition-all hover:scale-110 ${type === 'T' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-red-400 to-red-600'}`;
+            el.innerText = type;
+            el.title = type === 'T' ? 'Triệu phú' : 'Cướp';
+            parent.appendChild(el);
+        }
+
+        function init() {
+            path = solveBFS();
+            stepsListEl.innerHTML = '';
+            path.forEach((s, i) => {
+                const card = document.createElement('div');
+                card.className = 'step-card p-4 rounded-2xl border border-slate-700 bg-slate-900/40 cursor-pointer transition-all hover:bg-slate-700/50 flex items-center gap-4';
+                card.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-700">${i}</div>
+                    <div class="flex-grow">
+                        <div class="text-sm font-bold text-slate-200">${s.action || 'Bắt đầu'}</div>
+                        <div class="text-[10px] text-slate-500 mt-1">Trái: ${s.tl}T, ${s.cl}C • Phải: ${3-s.tl}T, ${3-s.cl}C</div>
+                    </div>
+                `;
+                card.onclick = () => renderStep(i);
+                stepsListEl.appendChild(card);
+            });
+            renderStep(0);
+        }
+
+        // Sự kiện nút bấm
+        document.getElementById('nextBtn').onclick = () => { if(currentIdx < path.length - 1) renderStep(currentIdx + 1); };
+        document.getElementById('prevBtn').onclick = () => { if(currentIdx > 0) renderStep(currentIdx - 1); };
+        document.getElementById('resetBtn').onclick = () => { renderStep(0); };
+
+        window.onload = init;
+    </script>
+</body>
+</html>
