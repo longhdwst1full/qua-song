@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài Toán Qua Sông: Triệu Phú & Cướp</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 40px;
+    }
+
+    h1 { font-size: 1.8rem; color: #38bdf8; text-align: center; margin-bottom: 4px;
+         text-shadow: 0 0 30px rgba(56,189,248,0.4); }
+    .subtitle { color: #94a3b8; text-align: center; font-size: 0.88rem; margin-bottom: 14px; }
+
+    /* ─── ALGO SELECTOR ─── */
+    #algo-selector {
+      display: flex;
+      gap: 0;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 14px;
+    }
+    .algo-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 22px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #94a3b8;
+      background: transparent;
+      transition: all 0.2s;
+      line-height: 1.2;
+    }
+    .algo-btn small { font-size: 0.68rem; font-weight: 400; color: #64748b; }
+    .algo-btn.active {
+      color: #fff;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      box-shadow: 0 2px 12px rgba(14,165,233,0.4);
+    }
+    .algo-btn.active small { color: #bae6fd; }
+    #algo-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    #algo-badge.bfs { background: #0c4a6e; color: #38bdf8; }
+    #algo-badge.dfs { background: #2e1065; color: #c084fc; }
+
+    /* ─── STEP HEADER ─── */
+    #step-header {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; max-width: 860px; margin-bottom: 8px; gap: 10px;
+    }
+    #step-counter {
+      background: #334155; padding: 5px 14px; border-radius: 20px;
+      font-size: 0.82rem; color: #94a3b8; white-space: nowrap;
+    }
+    #step-desc { flex: 1; text-align: center; font-size: 0.98rem; font-weight: 500; color: #f1f5f9; }
+
+    /* ─── SAFETY BADGES ─── */
+    .safe-badge { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .safe-badge.safe   { background: #166534; color: #4ade80; }
+    .safe-badge.unsafe { background: #7f1d1d; color: #fca5a5; }
+    .safe-badge.empty  { background: #1e3a5f; color: #7dd3fc; }
+
+    /* ─── SCENE ─── */
+    #scene-wrap { width: 100%; max-width: 860px; overflow-x: auto; }
+    #scene {
+      display: flex; height: 265px; min-width: 620px;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+
+    /* ─── BANKS ─── */
+    .bank {
+      width: 210px; flex-shrink: 0;
+      background: linear-gradient(180deg, #14532d 0%, #166534 40%, #15803d 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 14px 10px; position: relative;
+    }
+    .bank-label { position: absolute; top: 10px; font-size: 0.7rem; font-weight: 700;
+                  color: #bbf7d0; letter-spacing: 1px; text-transform: uppercase; }
+    .bank-stat  { position: absolute; bottom: 10px; font-size: 0.78rem; color: #bbf7d0; }
+    .people-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+                   align-items: center; max-width: 183px; }
+
+    /* ─── PERSON TOKENS ─── */
+    .person {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.45rem; border: 3px solid transparent;
+      transition: transform 0.3s, opacity 0.3s; user-select: none; cursor: default;
+    }
+    .person.millionaire {
+      background: radial-gradient(circle at 35% 35%, #fde68a, #b45309);
+      border-color: #fbbf24; box-shadow: 0 2px 8px rgba(251,191,36,0.4);
+    }
+    .person.robber {
+      background: radial-gradient(circle at 35% 35%, #fca5a5, #991b1b);
+      border-color: #ef4444; box-shadow: 0 2px 8px rgba(239,68,68,0.4);
+    }
+    .person.in-boat { width: 38px; height: 38px; font-size: 1.25rem; }
+
+    /* ─── RIVER ─── */
+    #river { flex: 1; background: linear-gradient(180deg, #0ea5e9 0%, #0369a1 55%, #075985 100%);
+             position: relative; overflow: hidden; }
+    .wave { position: absolute; left: -50%; width: 200%; height: 28px;
+            background: rgba(255,255,255,0.07); border-radius: 50% 50% 0 0 / 18px 18px 0 0; }
+    .wave:nth-child(1) { top: 25%; animation: drift 4s ease-in-out infinite; }
+    .wave:nth-child(2) { top: 52%; animation: drift 5.5s ease-in-out infinite reverse; }
+    .wave:nth-child(3) { top: 74%; animation: drift 3.5s ease-in-out infinite 1.2s; }
+    @keyframes drift {
+      0%,100% { transform: translateX(0) scaleY(1); }
+      50%      { transform: translateX(12%) scaleY(1.4); }
+    }
+
+    /* ─── BOAT ─── */
+    #boat-wrapper {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      transition: left 1.1s cubic-bezier(0.45, 0, 0.55, 1); z-index: 10; width: 136px;
+    }
+    .mast { width: 4px; height: 26px; background: #78350f; margin: 0 auto; position: relative; }
+    .flag { position: absolute; top: 0; left: 4px; width: 16px; height: 10px;
+            background: #fbbf24; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+    #boat-body {
+      width: 136px;
+      background: linear-gradient(180deg, #92400e 0%, #6b3a1f 100%);
+      border-radius: 6px 6px 28px 28px;
+      padding: 9px 8px 13px;
+      display: flex; flex-direction: column; align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 2px 0 #3b1a0a;
+    }
+    #boat-people { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center;
+                   min-height: 40px; align-items: center; }
+    #boat-label  { font-size: 0.58rem; color: #fde68a; margin-top: 4px;
+                   font-weight: 700; letter-spacing: 1px; }
+
+    /* ─── PROGRESS BAR ─── */
+    #progress-wrap { width: 100%; max-width: 860px; background: #1e293b; border-radius: 6px;
+                     height: 6px; margin: 10px 0 6px; overflow: hidden; }
+    #progress-bar  { height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8);
+                     border-radius: 6px; transition: width 0.4s ease; width: 0%; }
+
+    /* ─── CONTROLS ─── */
+    #controls { display: flex; gap: 10px; margin: 8px 0; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      padding: 9px 20px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 0.93rem; font-weight: 600;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover:not(:disabled)  { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-reset { background: #334155; color: #94a3b8; }
+    #btn-prev  { background: #475569; color: #e2e8f0; }
+    #btn-play  { background: #0ea5e9; color: #fff; min-width: 128px; }
+    #btn-next  { background: #475569; color: #e2e8f0; }
+
+    /* ─── LEGEND ─── */
+    #legend { display: flex; gap: 22px; font-size: 0.86rem; color: #94a3b8;
+              margin: 4px 0 12px; align-items: center; }
+    .legend-dot { width: 20px; height: 20px; border-radius: 50%;
+                  display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+    .legend-dot.m { background: radial-gradient(circle at 35% 35%, #fde68a, #b45309); }
+    .legend-dot.r { background: radial-gradient(circle at 35% 35%, #fca5a5, #991b1b); }
+
+    /* ─── STEPS TABLE ─── */
+    #steps-container { width: 100%; max-width: 860px; background: #1e293b;
+                       border-radius: 14px; padding: 14px; max-height: 210px; overflow-y: auto; }
+    #steps-container h3 { font-size: 0.78rem; color: #64748b; margin-bottom: 8px;
+                          text-transform: uppercase; letter-spacing: 1.5px; }
+    .step-row {
+      display: grid; grid-template-columns: 72px 1fr 88px 88px;
+      gap: 8px; padding: 6px 10px; border-radius: 7px;
+      font-size: 0.82rem; cursor: pointer; transition: background 0.15s; align-items: center;
+    }
+    .step-row:hover  { background: #334155; }
+    .step-row.active { background: #0c4a6e; color: #7dd3fc; }
+    .step-row.done   { color: #4ade80; }
+
+    /* ─── COMPARISON PANEL ─── */
+    #compare-panel {
+      width: 100%; max-width: 860px; background: #1e293b;
+      border-radius: 14px; padding: 16px; margin-top: 14px;
+    }
+    #compare-panel h3 { font-size: 0.78rem; color: #64748b; margin-bottom: 12px;
+                        text-transform: uppercase; letter-spacing: 1.5px; }
+    .compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .compare-card {
+      background: #0f172a; border-radius: 10px; padding: 14px;
+      border: 2px solid transparent;
+    }
+    .compare-card.bfs { border-color: #0c4a6e; }
+    .compare-card.dfs { border-color: #2e1065; }
+    .compare-card h4 {
+      font-size: 1rem; font-weight: 700; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .compare-card.bfs h4 { color: #38bdf8; }
+    .compare-card.dfs h4 { color: #c084fc; }
+    .compare-card h4 span { font-size: 0.7rem; font-weight: 400; color: #64748b; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center;
+                padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 0.83rem; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row .label { color: #94a3b8; }
+    .stat-row .value { font-weight: 700; color: #e2e8f0; }
+    .stat-row .value.good { color: #4ade80; }
+    .stat-row .value.warn { color: #fbbf24; }
+
+    /* Exploration visualization */
+    #explore-viz {
+      margin-top: 12px; background: #0f172a; border-radius: 10px; padding: 12px;
+    }
+    #explore-viz h4 { font-size: 0.78rem; color: #64748b; text-transform: uppercase;
+                      letter-spacing: 1px; margin-bottom: 10px; }
+    .explore-bars { display: flex; flex-direction: column; gap: 6px; }
+    .explore-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
+    .explore-bar-label { width: 54px; color: #94a3b8; text-align: right; flex-shrink: 0; }
+    .explore-bar-bg { flex: 1; height: 18px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+    .explore-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center;
+                        padding-left: 6px; font-size: 0.72rem; font-weight: 700; color: #fff;
+                        transition: width 0.6s ease; }
+    .explore-bar-fill.bfs { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+    .explore-bar-fill.dfs { background: linear-gradient(90deg, #7c3aed, #c084fc); }
+
+    /* Path diff highlight */
+    .diff-info { margin-top: 10px; padding: 10px; background: #1e293b; border-radius: 8px;
+                 font-size: 0.82rem; color: #94a3b8; line-height: 1.6; }
+    .diff-info strong { color: #e2e8f0; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<h1>⛵ Bài Toán Qua Sông</h1>
+<p class="subtitle">3 Triệu Phú và 3 Tên Cướp — thuyền chở tối đa 2 người</p>
+
+<!-- Algorithm selector -->
+<div id="algo-selector">
+  <button class="algo-btn active" id="btn-bfs" onclick="switchAlgo('bfs')">
+    📊 BFS
+    <small>Hàng đợi (Queue)</small>
+  </button>
+  <button class="algo-btn" id="btn-dfs" onclick="switchAlgo('dfs')">
+    🔍 DFS
+    <small>Ngăn xếp (Stack)</small>
+  </button>
+</div>
+
+<div id="step-header">
+  <div id="step-counter">Bước 0 / 0</div>
+  <div id="step-desc">Nhấn ▶ Tự động hoặc Tiếp ▶ để bắt đầu</div>
+  <span id="algo-badge" class="bfs">BFS</span>
+</div>
+
+<div id="scene-wrap">
+  <div id="scene">
+    <div class="bank" id="left-bank">
+      <div class="bank-label">◀ Bờ Trái</div>
+      <div class="people-grid" id="left-people"></div>
+      <div class="bank-stat" id="left-stat"></div>
+    </div>
+    <div id="river">
+      <div class="wave"></div><div class="wave"></div><div class="wave"></div>
+      <div id="boat-wrapper">
+        <div class="mast"><div class="flag"></div></div>
+        <div id="boat-body">
+          <div id="boat-people"></div>
+          <div id="boat-label">THUYỀN</div>
+        </div>
+      </div>
+    </div>
+    <div class="bank" id="right-bank">
+      <div class="bank-label">Bờ Phải ▶</div>
+      <div class="people-grid" id="right-people"></div>
+      <div class="bank-stat" id="right-stat"></div>
+    </div>
+  </div>
+</div>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+
+<div id="controls">
+  <button class="btn" id="btn-reset">⏮ Đầu</button>
+  <button class="btn" id="btn-prev">◀ Trước</button>
+  <button class="btn" id="btn-play">▶ Tự động</button>
+  <button class="btn" id="btn-next">Tiếp ▶</button>
+</div>
+
+<div id="legend">
+  <span><span class="legend-dot m">💰</span> Triệu Phú</span>
+  <span><span class="legend-dot r">😈</span> Tên Cướp</span>
+</div>
+
+<div id="steps-container">
+  <h3 id="steps-title">Các bước giải — 11 chuyến đi (BFS)</h3>
+  <div id="steps-list"></div>
+</div>
+
+<!-- Comparison Panel -->
+<div id="compare-panel">
+  <h3>So sánh BFS vs DFS</h3>
+
+  <div class="compare-grid">
+    <div class="compare-card bfs">
+      <h4>📊 BFS <span>Breadth-First Search</span></h4>
+      <div class="stat-row"><span class="label">Cấu trúc</span><span class="value">Queue (FIFO)</span></div>
+      <div class="stat-row"><span class="label">Số chuyến</span><span class="value good" id="bfs-trips">—</span></div>
+      <div class="stat-row"><span class="label">Nodes khám phá</span><span class="value" id="bfs-explored">—</span></div>
+      <div class="stat-row"><span class="label">Quay lui</span><span class="value good">0</span></div>
+      <div class="stat-row"><span class="label">Đảm bảo tối ưu</span><span class="value good">✅ Có</span></div>
+      <div class="stat-row"><span class="label">Bước đầu</span><span class="value" id="bfs-first" style="font-size:0.75rem">—</span></div>
+    </div>
+    <div class="compare-card dfs">
+      <h4>🔍 DFS <span>Depth-First Search</span></h4>
+      <div class="stat-row"><span class="label">Cấu trúc</span><span class="value">Stack (LIFO)</span></div>
+      <div class="stat-row"><span class="label">Số chuyến</span><span class="value warn" id="dfs-trips">—</span></div>
+      <div class="stat-row"><span class="label">Nodes khám phá</span><span class="value" id="dfs-explored">—</span></div>
+      <div class="stat-row"><span class="label">Quay lui</span><span class="value" id="dfs-backtracks">—</span></div>
+      <div class="stat-row"><span class="label">Đảm bảo tối ưu</span><span class="value warn">⚠️ Không</span></div>
+      <div class="stat-row"><span class="label">Bước đầu</span><span class="value" id="dfs-first" style="font-size:0.75rem">—</span></div>
+    </div>
+  </div>
+
+  <div id="explore-viz">
+    <h4>Số nodes khám phá</h4>
+    <div class="explore-bars">
+      <div class="explore-bar-row">
+        <span class="explore-bar-label">BFS</span>
+        <div class="explore-bar-bg">
+          <div class="explore-bar-fill bfs" id="bar-bfs" style="width:0%">—</div>
+        </div>
+      </div>
+      <div class="explore-bar-row">
+        <span class="explore-bar-label">DFS</span>
+        <div class="explore-bar-bg">
+          <div class="explore-bar-fill dfs" id="bar-dfs" style="width:0%">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diff-info" id="diff-info">
+    Chạy cả hai thuật toán để xem so sánh chi tiết...
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CORE: Validation & Frame Builder
+═══════════════════════════════════════════════ */
+function isValid(ml, rl) {
+  if (ml < 0 || ml > 3 || rl < 0 || rl > 3) return false;
+  if (ml > 0 && rl > ml) return false;
+  const mr = 3 - ml, rr = 3 - rl;
+  if (mr > 0 && rr > mr) return false;
+  return true;
+}
+
+/* ═══════════════════════════════════════════════
+   ALGORITHM 1: BFS (Breadth-First Search)
+   - Dùng Queue (FIFO)
+   - Duyệt theo từng lớp (level by level)
+   - Đảm bảo tìm được đường ngắn nhất
+═══════════════════════════════════════════════ */
+function solveBFS() {
+  // Ưu tiên thứ tự: ít người hơn trước
+  const MOVES = [[1,0],[2,0],[0,1],[0,2],[1,1]];
+  let explored = 0;
+
+  const queue   = [{ s: [3,3,0], path: [[3,3,0]] }];
+  const visited = new Set(['3,3,0']);
+
+  while (queue.length) {
+    const { s, path } = queue.shift();   // FIFO — lấy phần tử ĐẦU
+    const [ml, rl, boat] = s;
+    explored++;
+
+    if (ml === 0 && rl === 0 && boat === 1) return { path, explored, backtracks: 0 };
+
+    for (const [dm, dr] of MOVES) {
+      const nml = boat === 0 ? ml - dm : ml + dm;
+      const nrl = boat === 0 ? rl - dr : rl + dr;
+      const nb  = 1 - boat;
+      const key = `${nml},${nrl},${nb}`;
+      if (isValid(nml, nrl) && !visited.has(key)) {
+        visited.add(key);
+        queue.push({ s: [nml, nrl, nb], path: [...path, [nml, nrl, nb]] });
+      }
+    }
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   ALGORITHM 2: DFS (Depth-First Search)
+   - Dùng Stack (LIFO) / đệ quy với backtracking
+   - Duyệt sâu trước (đi hết một nhánh rồi mới quay lui)
+   - KHÔNG đảm bảo đường ngắn nhất
+   - Thứ tự khám phá KHÁC BFS → đường đi đầu khác
+═══════════════════════════════════════════════ */
+function solveDFS() {
+  // Thứ tự moves khác BFS: ưu tiên đưa hỗn hợp trước → đi theo nhánh khác
+  const MOVES = [[1,1],[0,2],[0,1],[2,0],[1,0]];
+  let explored  = 0;
+  let backtracks = 0;
+  let result    = null;
+
+  // Dùng visited với BACKTRACKING: xoá khi quay lui
+  // → cho phép DFS tìm đường qua các trạng thái đã từng thăm trong nhánh khác
+  const visited = new Set(['3,3,0']);
+
+  function dfs(ml, rl, boat, path) {
+    if (result) return;
+    explored++;
+
+    // Đích đến!
+    if (ml === 0 && rl === 0 && boat === 1) { result = [...path]; return; }
+
+    for (const [dm, dr] of MOVES) {
+      if (result) return;
+      const nml = boat === 0 ? ml - dm : ml + dm;
+      const nrl = boat === 0 ? rl - dr : rl + dr;
+      const nb  = 1 - boat;
+      const key = `${nml},${nrl},${nb}`;
+
+      if (isValid(nml, nrl) && !visited.has(key)) {
+        visited.add(key);
+        path.push([nml, nrl, nb]);
+
+        dfs(nml, nrl, nb, path);   // đi sâu
+
+        if (!result) {
+          // Nhánh này thất bại → QUAY LUI (backtrack)
+          path.pop();
+          visited.delete(key);     // cho phép thăm lại ở nhánh khác
+          backtracks++;
+        }
+      }
+    }
+  }
+
+  dfs(3, 3, 0, [[3, 3, 0]]);
+  return { path: result, explored, backtracks };
+}
+
+/* ═══════════════════════════════════════════════
+   BUILD ANIMATION FRAMES
+═══════════════════════════════════════════════ */
+function buildFrames(path) {
+  const frames = [];
+  frames.push({
+    ml:3, rl:3, mr:0, rr:0, bm:0, br:0,
+    side:'left', type:'dock', tripNum:0,
+    desc:'Khởi đầu: Tất cả 3 triệu phú và 3 tên cướp ở bờ trái'
+  });
+
+  for (let i = 1; i < path.length; i++) {
+    const [pml, prl, pboat] = path[i-1];
+    const [ml,  rl,  boat ] = path[i];
+    const goRight = pboat === 0;
+
+    const bm = goRight ? pml - ml : ml - pml;
+    const br = goRight ? prl - rl : rl - prl;
+    const dir = goRight ? '→' : '←';
+    const cargo = [];
+    if (bm > 0) cargo.push(`${bm} triệu phú`);
+    if (br > 0) cargo.push(`${br} tên cướp`);
+    const cargoStr = cargo.join(' + ');
+
+    // TRANSIT frame
+    let tml, trl, tmr, trr;
+    if (goRight) {
+      tml = pml - bm; trl = prl - br; tmr = 3 - pml; trr = 3 - prl;
+    } else {
+      tml = pml; trl = prl; tmr = 3 - pml - bm; trr = 3 - prl - br;
+    }
+    frames.push({
+      ml:tml, rl:trl, mr:tmr, rr:trr, bm, br,
+      side:'mid', type:'cross', tripNum:i,
+      desc:`${dir} Chuyến ${i}: Đang chở ${cargoStr} sang ${goRight?'phải':'trái'}...`
+    });
+
+    // DOCKED frame
+    const isLast = i === path.length - 1;
+    frames.push({
+      ml, rl, mr:3-ml, rr:3-rl, bm:0, br:0,
+      side: boat === 1 ? 'right' : 'left',
+      type: 'dock', tripNum: i,
+      desc: isLast
+        ? '🎉 HOÀN THÀNH! Tất cả 6 người đã qua sông an toàn!'
+        : `${dir} Chuyến ${i}: ${cargoStr} đã ${goRight?'đến bờ phải':'về bờ trái'}`
+    });
+  }
+  return frames;
+}
+
+/* ═══════════════════════════════════════════════
+   DOM HELPERS
+═══════════════════════════════════════════════ */
+function makePeople(m, r, inBoat = false) {
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < m; i++) {
+    const el = document.createElement('div');
+    el.className = 'person millionaire' + (inBoat ? ' in-boat' : '');
+    el.textContent = '💰'; el.title = 'Triệu Phú';
+    frag.appendChild(el);
+  }
+  for (let i = 0; i < r; i++) {
+    const el = document.createElement('div');
+    el.className = 'person robber' + (inBoat ? ' in-boat' : '');
+    el.textContent = '😈'; el.title = 'Tên Cướp';
+    frag.appendChild(el);
+  }
+  return frag;
+}
+
+function safeBadge(m, r) {
+  if (m === 0 && r === 0) return { cls: 'empty', text: 'Trống' };
+  if (m === 0)            return { cls: 'safe',  text: '✓ An toàn' };
+  if (r <= m)             return { cls: 'safe',  text: '✓ An toàn' };
+  return                         { cls: 'unsafe', text: '✗ Nguy hiểm!' };
+}
+
+function getBoatLeft(side) {
+  const rw = document.getElementById('river').offsetWidth;
+  if (side === 'left')  return 8;
+  if (side === 'mid')   return Math.round(rw / 2 - 68);
+  return rw - 144;
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════ */
+const $leftPeople  = document.getElementById('left-people');
+const $rightPeople = document.getElementById('right-people');
+const $boatPeople  = document.getElementById('boat-people');
+const $leftStat    = document.getElementById('left-stat');
+const $rightStat   = document.getElementById('right-stat');
+const $boatWrapper = document.getElementById('boat-wrapper');
+const $desc        = document.getElementById('step-desc');
+const $counter     = document.getElementById('step-counter');
+const $progress    = document.getElementById('progress-bar');
+const $btnPrev     = document.getElementById('btn-prev');
+const $btnNext     = document.getElementById('btn-next');
+
+function render(idx) {
+  const f = frames[idx];
+
+  $leftPeople.innerHTML = $rightPeople.innerHTML = $boatPeople.innerHTML = '';
+  $leftPeople.appendChild(makePeople(f.ml, f.rl));
+  $rightPeople.appendChild(makePeople(f.mr, f.rr));
+  $boatPeople.appendChild(makePeople(f.bm, f.br, true));
+
+  const lb = safeBadge(f.ml, f.rl), rb = safeBadge(f.mr, f.rr);
+  $leftStat.innerHTML  = `${f.ml}💰 ${f.rl}😈 <span class="safe-badge ${lb.cls}">${lb.text}</span>`;
+  $rightStat.innerHTML = `${f.mr}💰 ${f.rr}😈 <span class="safe-badge ${rb.cls}">${rb.text}</span>`;
+
+  $boatWrapper.style.left = getBoatLeft(f.side) + 'px';
+  $desc.textContent    = f.desc;
+  $counter.textContent = `Bước ${idx} / ${frames.length - 1}`;
+  $progress.style.width = (idx / (frames.length - 1) * 100) + '%';
+  $btnPrev.disabled = idx === 0;
+  $btnNext.disabled = idx === frames.length - 1;
+
+  document.querySelectorAll('.step-row').forEach((row, ri) => {
+    row.classList.remove('active', 'done');
+    const crossF = ri * 2 + 1, dockF = ri * 2 + 2;
+    if (idx > dockF) row.classList.add('done');
+    else if (idx === crossF || idx === dockF) {
+      row.classList.add('active');
+      row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   STEPS LIST
+═══════════════════════════════════════════════ */
+function buildStepsList(path, algoName) {
+  const list = document.getElementById('steps-list');
+  list.innerHTML = '';
+  document.getElementById('steps-title').textContent =
+    `Các bước giải — ${path.length - 1} chuyến đi (${algoName})`;
+
+  for (let i = 1; i < path.length; i++) {
+    const [pml, prl, pboat] = path[i-1];
+    const [ml,  rl ]        = path[i];
+    const goRight = pboat === 0;
+    const bm = goRight ? pml - ml : ml - pml;
+    const br = goRight ? prl - rl : rl - prl;
+    const dir = goRight ? '→' : '←';
+    const cargo = [];
+    if (bm > 0) cargo.push(`${bm}💰`);
+    if (br > 0) cargo.push(`${br}😈`);
+
+    const row = document.createElement('div');
+    row.className = 'step-row';
+    row.innerHTML = `
+      <span style="color:#64748b;font-weight:700">Chuyến ${i}</span>
+      <span>${dir} Chở ${cargo.join('+')} ${goRight?'sang phải':'về trái'}</span>
+      <span style="color:#94a3b8">Trái: ${ml}💰${rl}😈</span>
+      <span style="color:#94a3b8">Phải: ${3-ml}💰${3-rl}😈</span>
+    `;
+    row.addEventListener('click', () => {
+      stopAuto();
+      currentFrame = i * 2;
+      render(currentFrame);
+    });
+    list.appendChild(row);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   COMPARISON PANEL
+═══════════════════════════════════════════════ */
+function describeFirstMove(path) {
+  if (!path || path.length < 2) return '—';
+  const [pml, prl, pboat] = path[0];
+  const [ml,  rl ]        = path[1];
+  const goRight = pboat === 0;
+  const bm = goRight ? pml - ml : ml - pml;
+  const br = goRight ? prl - rl : rl - prl;
+  const cargo = [];
+  if (bm > 0) cargo.push(`${bm} triệu phú`);
+  if (br > 0) cargo.push(`${br} tên cướp`);
+  return `→ ${cargo.join('+')} sang phải`;
+}
+
+function fillComparison(bfsResult, dfsResult) {
+  const bfsTrips    = bfsResult.path.length - 1;
+  const dfsTrips    = dfsResult.path.length - 1;
+  const bfsExplored = bfsResult.explored;
+  const dfsExplored = dfsResult.explored;
+  const maxExp      = Math.max(bfsExplored, dfsExplored);
+
+  document.getElementById('bfs-trips').textContent    = `${bfsTrips} chuyến`;
+  document.getElementById('dfs-trips').textContent    = `${dfsTrips} chuyến`;
+  document.getElementById('bfs-explored').textContent = `${bfsExplored} nodes`;
+  document.getElementById('dfs-explored').textContent = `${dfsExplored} nodes`;
+  document.getElementById('dfs-backtracks').textContent = `${dfsResult.backtracks} lần`;
+  document.getElementById('bfs-first').textContent    = describeFirstMove(bfsResult.path);
+  document.getElementById('dfs-first').textContent    = describeFirstMove(dfsResult.path);
+
+  // Bars
+  const bfsPct = Math.round(bfsExplored / maxExp * 100);
+  const dfsPct = Math.round(dfsExplored / maxExp * 100);
+  document.getElementById('bar-bfs').style.width = bfsPct + '%';
+  document.getElementById('bar-dfs').style.width = dfsPct + '%';
+  document.getElementById('bar-bfs').textContent = bfsExplored;
+  document.getElementById('bar-dfs').textContent = dfsExplored;
+
+  // Color the explored values
+  const bfsEl = document.getElementById('bfs-explored');
+  const dfsEl = document.getElementById('dfs-explored');
+  bfsEl.className = 'value ' + (bfsExplored <= dfsExplored ? 'good' : 'warn');
+  dfsEl.className = 'value ' + (dfsExplored <= bfsExplored ? 'good' : 'warn');
+
+  // Check if paths differ
+  const bfsFirst = JSON.stringify(bfsResult.path.slice(0,2));
+  const dfsFirst = JSON.stringify(dfsResult.path.slice(0,2));
+  const pathSame = JSON.stringify(bfsResult.path) === JSON.stringify(dfsResult.path);
+
+  let note = '';
+  if (!pathSame) {
+    note = `<strong>Đường đi khác nhau:</strong> BFS bắt đầu bằng "${describeFirstMove(bfsResult.path)}",
+            DFS bằng "${describeFirstMove(dfsResult.path)}" — nhưng cả hai đều tìm được lời giải
+            tối ưu <strong>${bfsTrips} chuyến</strong> nhờ tập trạng thái hợp lệ bị ràng buộc chặt chẽ.`;
+  } else {
+    note = `<strong>Đường đi giống nhau</strong> vì bài toán này chỉ có duy nhất một lời giải tối ưu.`;
+  }
+
+  note += ` BFS duyệt rộng nên khám phá <strong>${bfsExplored} nodes</strong> (bao gồm cả nhánh chết).
+            DFS đi sâu ngay, chỉ cần <strong>${dfsExplored} nodes</strong>
+            với <strong>${dfsResult.backtracks} lần quay lui</strong>.`;
+
+  document.getElementById('diff-info').innerHTML = note;
+}
+
+/* ═══════════════════════════════════════════════
+   ALGORITHM SWITCHING
+═══════════════════════════════════════════════ */
+let results = {};      // { bfs: {path, explored, backtracks}, dfs: {...} }
+let currentAlgo = 'bfs';
+let frames = [];
+let currentFrame = 0;
+let autoTimer = null;
+
+function switchAlgo(algo) {
+  if (currentAlgo === algo) return;
+  stopAuto();
+  currentAlgo = algo;
+
+  // Update UI
+  document.getElementById('btn-bfs').classList.toggle('active', algo === 'bfs');
+  document.getElementById('btn-dfs').classList.toggle('active', algo === 'dfs');
+  const badge = document.getElementById('algo-badge');
+  badge.textContent = algo.toUpperCase();
+  badge.className = algo;
+
+  // Rebuild frames & steps list
+  frames = buildFrames(results[algo].path);
+  buildStepsList(results[algo].path, algo.toUpperCase());
+  currentFrame = 0;
+
+  // Snap boat without animation
+  $boatWrapper.style.transition = 'none';
+  $boatWrapper.style.left = getBoatLeft('left') + 'px';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    $boatWrapper.style.transition = 'left 1.1s cubic-bezier(0.45, 0, 0.55, 1)';
+    render(0);
+  }));
+}
+
+/* ═══════════════════════════════════════════════
+   CONTROLS
+═══════════════════════════════════════════════ */
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (currentFrame < frames.length - 1) render(++currentFrame);
+});
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentFrame > 0) render(--currentFrame);
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  stopAuto(); currentFrame = 0; render(0);
+});
+document.getElementById('btn-play').addEventListener('click', toggleAuto);
+
+function toggleAuto() { autoTimer ? stopAuto() : startAuto(); }
+
+function startAuto() {
+  if (currentFrame >= frames.length - 1) currentFrame = 0;
+  document.getElementById('btn-play').textContent = '⏸ Dừng';
+  document.getElementById('btn-play').style.background = '#dc2626';
+
+  function tick() {
+    if (currentFrame >= frames.length - 1) { stopAuto(); return; }
+    render(++currentFrame);
+    const delay = frames[currentFrame].type === 'cross' ? 1100 : 1700;
+    autoTimer = setTimeout(tick, delay);
+  }
+  autoTimer = setTimeout(tick, 400);
+}
+
+function stopAuto() {
+  clearTimeout(autoTimer); autoTimer = null;
+  document.getElementById('btn-play').textContent = '▶ Tự động';
+  document.getElementById('btn-play').style.background = '#0ea5e9';
+}
+
+/* ═══════════════════════════════════════════════
+   INIT — Chạy cả hai thuật toán
+═══════════════════════════════════════════════ */
+results.bfs = solveBFS();
+results.dfs = solveDFS();
+
+// Log để debug (F12 → Console)
+console.log('BFS path:', results.bfs.path.map(s => `(${s.join(',')})`).join(' → '));
+console.log('DFS path:', results.dfs.path.map(s => `(${s.join(',')})`).join(' → '));
+console.log(`BFS explored: ${results.bfs.explored} | DFS explored: ${results.dfs.explored}, backtracks: ${results.dfs.backtracks}`);
+
+// Fill comparison panel
+fillComparison(results.bfs, results.dfs);
+
+// Init with BFS
+frames = buildFrames(results.bfs.path);
+buildStepsList(results.bfs.path, 'BFS');
+
+$boatWrapper.style.transition = 'none';
+$boatWrapper.style.left = getBoatLeft('left') + 'px';
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  $boatWrapper.style.transition = 'left 1.1s cubic-bezier(0.45, 0, 0.55, 1)';
+  render(0);
+}));
+
+window.addEventListener('resize', () => {
+  $boatWrapper.style.transition = 'none';
+  $boatWrapper.style.left = getBoatLeft(frames[currentFrame].side) + 'px';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    $boatWrapper.style.transition = 'left 1.1s cubic-bezier(0.45, 0, 0.55, 1)';
+  }));
+});
+</script>
+</body>
+</html>
